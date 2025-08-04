@@ -35,6 +35,8 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     List<Product> findByUserId(String userId);
 
+    boolean existsByNameAndUserId(String name, String userId);
+
     long countByUserId(String userId);
 
     void deleteByUserId(String userId);
