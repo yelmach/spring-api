@@ -20,7 +20,6 @@ public class User {
 
     @NotBlank(message = "name is required")
     @Size(min = 3, max = 50, message = "name must be between 3 and 50 characters")
-    @Indexed(unique = true)
     private String name;
 
     @NotBlank(message = "Email is required")
@@ -62,11 +61,11 @@ public class User {
         this.id = id;
     }
 
-    public String getUsername() {
+    public String getName() {
         return name;
     }
 
-    public void setUsername(String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
