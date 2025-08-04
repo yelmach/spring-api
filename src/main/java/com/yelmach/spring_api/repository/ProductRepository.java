@@ -19,7 +19,23 @@ public interface ProductRepository extends MongoRepository<Product, String> {
 
     List<Product> findByName(String name);
 
+    List<Product> findByNameContainingIgnoreCase(String name);
+
+    List<Product> findByDescriptionContainingIgnoreCase(String description);
+
+    List<Product> findByPriceBetween(double minPrice, double maxPrice);
+
     List<Product> findByPriceGreaterThan(double price);
 
-    List<Product> findByNameContainingIgnoreCase(String name);
+    List<Product> findByPriceLessThan(double price);
+
+    List<Product> findTop10ByOrderByPriceDesc();
+
+    List<Product> findTop10ByOrderByPriceAsc();
+
+    List<Product> findByUserId(String userId);
+
+    long countByUserId(String userId);
+
+    void deleteByUserId(String userId);
 }

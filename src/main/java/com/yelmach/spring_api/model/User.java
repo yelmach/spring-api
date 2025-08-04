@@ -18,10 +18,10 @@ public class User {
     @Id
     private String id;
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @NotBlank(message = "name is required")
+    @Size(min = 3, max = 50, message = "name must be between 3 and 50 characters")
     @Indexed(unique = true)
-    private String username;
+    private String name;
 
     @NotBlank(message = "Email is required")
     @Size(max = 80, message = "Email must be under 80 characters long")
@@ -31,7 +31,7 @@ public class User {
 
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters long")
-    @Size(min = 100, message = "Password must be under 100 characters long")
+    @Size(max = 100, message = "Password must be under 100 characters long")
     @JsonIgnore
     private String password;
 
@@ -40,15 +40,15 @@ public class User {
     public User() {
     }
 
-    public User(String username, String email, String password) {
-        this.username = username;
+    public User(String name, String email, String password) {
+        this.name = name;
         this.email = email;
         this.password = password;
         this.role = Role.USER;
     }
 
-    public User(String username, String email, String password, Role role) {
-        this.username = username;
+    public User(String name, String email, String password, Role role) {
+        this.name = name;
         this.email = email;
         this.password = password;
         this.role = role;
@@ -63,11 +63,11 @@ public class User {
     }
 
     public String getUsername() {
-        return username;
+        return name;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setUsername(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -96,7 +96,7 @@ public class User {
 
     @Override
     public String toString() {
-        return "User [id=" + id + ", username=" + username + ", email=" + email + ", password=" + password + ", role="
+        return "User [id=" + id + ", name=" + name + ", email=" + email + ", password=" + password + ", role="
                 + role + "]";
     }
 }
