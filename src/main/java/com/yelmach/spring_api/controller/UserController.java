@@ -17,33 +17,29 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.model.User;
-import com.yelmach.spring_api.repository.UserRepository;
+import com.yelmach.spring_api.service.UserService;
 
 import jakarta.validation.Valid;
 
 @RestController("/api/users")
 public class UserController {
+
     @Autowired
-    private UserRepository userRepository;
+    private UserService userService;
 
     @GetMapping
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userService.getAllUsers();
     }
 
     @PostMapping
     public ResponseEntity<?> createUser(@Valid @RequestBody User user) {
         try {
-            if (userRepository.existsByEmail(user.getEmail())) {
-                String msg = "Email already exists";
-                return ResponseEntity.badRequest().body(createErrorResponse(msg));
-            }
-
-            User savedUser = userRepository.save(user);
-
+            User savedUser = userService.createUser(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error creating user: " + e.getMessage()));
@@ -53,7 +49,7 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id) {
         try {
-            Optional<User> user = userRepository.findById(id);
+            Optional<User> user = userService.getUserById(id);
             if (user.isPresent()) {
                 return ResponseEntity.ok(user.get());
             } else {
@@ -69,41 +65,14 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable String id, @Valid @RequestBody User userDetails) {
         try {
-            Optional<User> optionalUser = userRepository.findById(id);
-
-            if (!optionalUser.isPresent()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("User not found with id: " + id));
-            }
-
-            User user = optionalUser.get();
-
-            if (!user.getName().equals(userDetails.getName()) &&
-                    userRepository.existsByName(userDetails.getName())) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Username already exists"));
-            }
-
-            if (!user.getEmail().equals(userDetails.getEmail()) &&
-                    userRepository.existsByEmail(userDetails.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Email already exists"));
-            }
-
-            user.setName(userDetails.getName());
-            user.setEmail(userDetails.getEmail());
-
-            if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-                user.setPassword(userDetails.getPassword());
-            }
-
-            if (userDetails.getRole() != null) {
-                user.setRole(userDetails.getRole());
-            }
-
-            User updatedUser = userRepository.save(user);
+            User updatedUser = userService.updateUser(id, userDetails);
             return ResponseEntity.ok(updatedUser);
-
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error updating user: " + e.getMessage()));
@@ -113,14 +82,11 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable String id) {
         try {
-            if (!userRepository.existsById(id)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("User not found with id: " + id));
-            }
-
-            userRepository.deleteById(id);
+            userService.deleteUser(id);
             return ResponseEntity.ok(createSuccessResponse("User with id " + id + " has been deleted"));
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error deleting user: " + e.getMessage()));
@@ -131,21 +97,10 @@ public class UserController {
     public ResponseEntity<?> searchUsers(@RequestParam(required = false) String name,
             @RequestParam(required = false) String email) {
         try {
-            List<User> users;
-
-            if (!name.isEmpty() && !email.isEmpty()) {
-                users = userRepository.findByNameContainingIgnoreCase(name);
-                users = userRepository.findByEmailContainingIgnoreCase(email);
-            } else if (!name.isEmpty()) {
-                users = userRepository.findByNameContainingIgnoreCase(name);
-            } else if (!email.isEmpty()) {
-                users = userRepository.findByEmailContainingIgnoreCase(email);
-            } else {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Please provide either name or email parameter"));
-            }
-
+            List<User> users = userService.searchUsers(name, email);
             return ResponseEntity.ok(users);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error searching users: " + e.getMessage()));
@@ -155,11 +110,7 @@ public class UserController {
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats() {
         try {
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalUsers", userRepository.count());
-            stats.put("adminCount", userRepository.countByRole(Role.ADMIN));
-            stats.put("userCount", userRepository.countByRole(Role.USER));
-
+            Map<String, Object> stats = userService.getUserStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -170,25 +121,9 @@ public class UserController {
     @PostMapping("/test")
     public ResponseEntity<?> createTestUsers() {
         try {
-            // Create admin user
-            User admin = new User("admin", "admin@admin.com", "admin123", Role.ADMIN);
-            if (!userRepository.existsByEmail("admin@admin.com")) {
-                userRepository.save(admin);
-            }
-
-            // Create regular users
-            User user1 = new User("user1", "user1@user.com", "user123");
-            User user2 = new User("user2", "user2@user.com", "user123");
-
-            if (!userRepository.existsByEmail("user1@user.com")) {
-                userRepository.save(user1);
-            }
-            if (!userRepository.existsByEmail("user2@user.com")) {
-                userRepository.save(user2);
-            }
-
+            userService.createTestUsers();
             return ResponseEntity.ok(createSuccessResponse(
-                    "Test users created successfully! Total users: " + userRepository.count()));
+                    "Test users created successfully! Total users: " + userService.getUserCount()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error creating test users: " + e.getMessage()));

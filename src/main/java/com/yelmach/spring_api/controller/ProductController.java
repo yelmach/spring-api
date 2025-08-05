@@ -19,8 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.yelmach.spring_api.model.Product;
-import com.yelmach.spring_api.repository.ProductRepository;
-import com.yelmach.spring_api.repository.UserRepository;
+import com.yelmach.spring_api.service.ProductService;
 
 import jakarta.validation.Valid;
 
@@ -29,15 +28,12 @@ import jakarta.validation.Valid;
 public class ProductController {
 
     @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private ProductService productService;
 
     @GetMapping
     public ResponseEntity<?> getAllProducts() {
         try {
-            List<Product> products = productRepository.findAll();
+            List<Product> products = productService.getAllProducts();
             return ResponseEntity.ok(products);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -48,21 +44,10 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<?> createProduct(@Valid @RequestBody Product product) {
         try {
-            if (!product.getUserId().isEmpty()) {
-                if (!userRepository.existsById(product.getUserId())) {
-                    return ResponseEntity.badRequest()
-                            .body(createErrorResponse("User not found with id: " + product.getUserId()));
-                }
-
-                if (productRepository.existsByNameAndUserId(product.getName(), product.getUserId())) {
-                    return ResponseEntity.badRequest()
-                            .body(createErrorResponse("Product with this name already exists for this user"));
-                }
-            }
-
-            Product savedProduct = productRepository.save(product);
+            Product savedProduct = productService.createProduct(product);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error creating product: " + e.getMessage()));
@@ -72,7 +57,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductById(@PathVariable String id) {
         try {
-            Optional<Product> product = productRepository.findById(id);
+            Optional<Product> product = productService.getProductById(id);
             if (product.isPresent()) {
                 return ResponseEntity.ok(product.get());
             } else {
@@ -88,27 +73,14 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable String id, @Valid @RequestBody Product productDetails) {
         try {
-            Optional<Product> optionalProduct = productRepository.findById(id);
-
-            if (!optionalProduct.isPresent()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("Product not found with id: " + id));
-            }
-
-            Product product = optionalProduct.get();
-
-            if (!productDetails.getUserId().isEmpty() && !userRepository.existsById(productDetails.getUserId())) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("User not found with id: " + productDetails.getUserId()));
-            }
-
-            product.setName(productDetails.getName());
-            product.setDescription(productDetails.getDescription());
-            product.setPrice(productDetails.getPrice());
-
-            Product updatedProduct = productRepository.save(product);
+            Product updatedProduct = productService.updateProduct(id, productDetails);
             return ResponseEntity.ok(updatedProduct);
-
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not found")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(createErrorResponse(e.getMessage()));
+            }
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error updating product: " + e.getMessage()));
@@ -118,14 +90,11 @@ public class ProductController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable String id) {
         try {
-            if (!productRepository.existsById(id)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("Product not found with id: " + id));
-            }
-
-            productRepository.deleteById(id);
+            productService.deleteProduct(id);
             return ResponseEntity.ok(createSuccessResponse("Product with id " + id + " has been deleted"));
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error deleting product: " + e.getMessage()));
@@ -135,14 +104,10 @@ public class ProductController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getProductsByUserId(@PathVariable String userId) {
         try {
-            if (!userRepository.existsById(userId)) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("User not found with id: " + userId));
-            }
-
-            List<Product> products = productRepository.findByUserId(userId);
+            List<Product> products = productService.getProductsByUserId(userId);
             return ResponseEntity.ok(products);
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error fetching products for user: " + e.getMessage()));
@@ -152,14 +117,10 @@ public class ProductController {
     @GetMapping("/search")
     public ResponseEntity<?> searchProducts(@RequestParam String name) {
         try {
-            if (name.trim().isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Search query cannot be empty"));
-            }
-
-            List<Product> products = productRepository.findByName(name.trim());
+            List<Product> products = productService.searchProducts(name);
             return ResponseEntity.ok(products);
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error searching products: " + e.getMessage()));
@@ -169,14 +130,10 @@ public class ProductController {
     @GetMapping("/price-range")
     public ResponseEntity<?> getProductsByPriceRange(@RequestParam double minPrice, @RequestParam double maxPrice) {
         try {
-            if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice) {
-                return ResponseEntity.badRequest()
-                        .body(createErrorResponse("Invalid price range. Min price must be >= 0 and <= max price"));
-            }
-
-            List<Product> products = productRepository.findByPriceBetween(minPrice, maxPrice);
+            List<Product> products = productService.getProductsByPriceRange(minPrice, maxPrice);
             return ResponseEntity.ok(products);
-
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error fetching products by price range: " + e.getMessage()));
@@ -186,7 +143,7 @@ public class ProductController {
     @GetMapping("/highest-price")
     public ResponseEntity<?> getHighestPriceProducts() {
         try {
-            List<Product> products = productRepository.findTop10ByOrderByPriceDesc();
+            List<Product> products = productService.getHighestPriceProducts();
             return ResponseEntity.ok(products);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -197,7 +154,7 @@ public class ProductController {
     @GetMapping("/lowest-price")
     public ResponseEntity<?> getLowestPriceProducts() {
         try {
-            List<Product> products = productRepository.findTop10ByOrderByPriceAsc();
+            List<Product> products = productService.getLowestPriceProducts();
             return ResponseEntity.ok(products);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -208,22 +165,7 @@ public class ProductController {
     @GetMapping("/stats")
     public ResponseEntity<?> getProductStats() {
         try {
-            Map<String, Object> stats = new HashMap<>();
-            stats.put("totalProducts", productRepository.count());
-
-            // Get user-specific stats if needed
-            List<Object[]> userProductCounts = productRepository.findAll()
-                    .stream()
-                    .collect(java.util.stream.Collectors.groupingBy(
-                            p -> p.getUserId() != null ? p.getUserId() : "No User",
-                            java.util.stream.Collectors.counting()))
-                    .entrySet()
-                    .stream()
-                    .map(entry -> new Object[] { entry.getKey(), entry.getValue() })
-                    .collect(java.util.stream.Collectors.toList());
-
-            stats.put("productsByUser", userProductCounts);
-
+            Map<String, Object> stats = productService.getProductStats();
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -234,18 +176,9 @@ public class ProductController {
     @PostMapping("/test")
     public ResponseEntity<?> createTestProducts() {
         try {
-            // Create products without user association for testing
-            Product product1 = new Product("Laptop", "Gaming laptop", 999.99);
-            Product product2 = new Product("Mouse", "Wireless mouse", 25.50);
-            Product product3 = new Product("Keyboard", "Mechanical keyboard", 75.00);
-
-            productRepository.save(product1);
-            productRepository.save(product2);
-            productRepository.save(product3);
-
+            productService.createTestProducts();
             return ResponseEntity.ok(createSuccessResponse(
-                    "Test products created successfully! Total products: " + productRepository.count()));
-
+                    "Test products created successfully! Total products: " + productService.getProductCount()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Error creating test products: " + e.getMessage()));
