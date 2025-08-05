@@ -4,8 +4,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import io.micrometer.common.lang.NonNullFields;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -23,15 +21,13 @@ public class User {
     private String name;
 
     @NotBlank(message = "Email is required")
-    @Size(max = 80, message = "Email must be under 80 characters long")
+    @Size(max = 100, message = "Email must be under 100 characters long")
     @Email(message = "Please provide a valid email address")
     @Indexed(unique = true)
     private String email;
 
     @NotBlank(message = "Password is required")
-    @Size(min = 6, message = "Password must be at least 6 characters long")
-    @Size(max = 100, message = "Password must be under 100 characters long")
-    @JsonIgnore
+    @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")
     private String password;
 
     private Role role;

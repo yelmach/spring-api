@@ -30,9 +30,6 @@ public class Product {
     @NotBlank(message = "User ID is required")
     private String userId;
 
-    public Product() {
-    }
-
     public Product(String name, String description, double price) {
         this.name = name;
         this.description = description;
@@ -76,16 +73,6 @@ public class Product {
 
     public void setPrice(double price) {
         this.price = price;
-    }
-
-    @Override
-    public String toString() {
-        return "Product{" +
-                "id='" + id + '\'' +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", price=" + price +
-                '}';
     }
 
     public String getUserId() {
