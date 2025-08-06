@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import com.yelmach.spring_api.dto.request.UserRegistrationRequest;
 import com.yelmach.spring_api.dto.request.UserUpdateRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
+import com.yelmach.spring_api.exception.DuplicateResourceException;
+import com.yelmach.spring_api.exception.InvalidRequestException;
+import com.yelmach.spring_api.exception.ResourceNotFoundException;
 import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.repository.UserRepository;
@@ -27,9 +30,9 @@ public class UserService {
                 .toList();
     }
 
-    public UserResponse createUser(UserRegistrationRequest request) throws RuntimeException {
+    public UserResponse createUser(UserRegistrationRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicateResourceException("Email already exists");
         }
 
         User user = new User(request.name(), request.email(), request.password());
@@ -42,23 +45,23 @@ public class UserService {
                 .map(this::convertToUserResponse);
     }
 
-    public UserResponse updateUser(String id, UserUpdateRequest request) throws RuntimeException {
+    public UserResponse updateUser(String id, UserUpdateRequest request) {
         Optional<User> optionalUser = userRepository.findById(id);
 
         if (!optionalUser.isPresent()) {
-            throw new RuntimeException("User not found with id: " + id);
+            throw new ResourceNotFoundException("User not found with id: " + id);
         }
 
         User user = optionalUser.get();
 
         if (!user.getName().equals(request.name()) &&
                 userRepository.existsByName(request.name())) {
-            throw new RuntimeException("Username already exists");
+            throw new DuplicateResourceException("Username already exists");
         }
 
         if (!user.getEmail().equals(request.email()) &&
                 userRepository.existsByEmail(request.email())) {
-            throw new RuntimeException("Email already exists");
+            throw new DuplicateResourceException("Email already exists");
         }
 
         if (request.name() != null) {
@@ -75,16 +78,16 @@ public class UserService {
         return convertToUserResponse(updatedUser);
     }
 
-    public void deleteUser(String id) throws RuntimeException {
+    public void deleteUser(String id) {
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with id: " + id);
+            throw new ResourceNotFoundException("User not found with id: " + id);
         }
         userRepository.deleteById(id);
     }
 
-    public List<UserResponse> searchUsers(String name, String email) throws RuntimeException {
-        if ((name.isEmpty()) && (email.isEmpty())) {
-            throw new RuntimeException("Please provide either name or email parameter");
+    public List<UserResponse> searchUsers(String name, String email) {
+        if (name.isEmpty() && email.isEmpty()) {
+            throw new InvalidRequestException("Please provide either name or email parameter");
         }
 
         List<User> users;

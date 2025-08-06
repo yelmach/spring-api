@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
+import com.yelmach.spring_api.exception.DuplicateResourceException;
+import com.yelmach.spring_api.exception.InvalidRequestException;
+import com.yelmach.spring_api.exception.ResourceNotFoundException;
 import com.yelmach.spring_api.model.Product;
 import com.yelmach.spring_api.repository.ProductRepository;
 import com.yelmach.spring_api.repository.UserRepository;
@@ -27,14 +30,14 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-    public Product createProduct(ProductCreationRequest request, String userId) throws RuntimeException {
+    public Product createProduct(ProductCreationRequest request, String userId) {
         if (!userId.isEmpty()) {
             if (!userRepository.existsById(userId)) {
-                throw new RuntimeException("User not found with id: " + userId);
+                throw new ResourceNotFoundException("User not found with id: " + userId);
             }
 
             if (productRepository.existsByNameAndUserId(request.name(), userId)) {
-                throw new RuntimeException("Product with this name already exists for this user");
+                throw new DuplicateResourceException("Product with this name already exists for this user");
             }
         }
 
@@ -42,7 +45,7 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public Product createProduct(ProductCreationRequest request) throws RuntimeException {
+    public Product createProduct(ProductCreationRequest request) {
         Product product = new Product(request.name(), request.description(), request.price());
         return productRepository.save(product);
     }
@@ -51,11 +54,11 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
-    public Product updateProduct(String id, ProductUpdateRequest request) throws RuntimeException {
+    public Product updateProduct(String id, ProductUpdateRequest request) {
         Optional<Product> optionalProduct = productRepository.findById(id);
 
         if (!optionalProduct.isPresent()) {
-            throw new RuntimeException("Product not found with id: " + id);
+            throw new ResourceNotFoundException("Product not found with id: " + id);
         }
 
         Product product = optionalProduct.get();
@@ -73,30 +76,30 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public void deleteProduct(String id) throws RuntimeException {
+    public void deleteProduct(String id) {
         if (!productRepository.existsById(id)) {
-            throw new RuntimeException("Product not found with id: " + id);
+            throw new ResourceNotFoundException("Product not found with id: " + id);
         }
         productRepository.deleteById(id);
     }
 
-    public List<Product> getProductsByUserId(String userId) throws RuntimeException {
+    public List<Product> getProductsByUserId(String userId) {
         if (!userRepository.existsById(userId)) {
-            throw new RuntimeException("User not found with id: " + userId);
+            throw new ResourceNotFoundException("User not found with id: " + userId);
         }
         return productRepository.findByUserId(userId);
     }
 
-    public List<Product> searchProducts(String name) throws RuntimeException {
+    public List<Product> searchProducts(String name) {
         if (name.trim().isEmpty()) {
-            throw new RuntimeException("Search query cannot be empty");
+            throw new InvalidRequestException("Search query cannot be empty");
         }
         return productRepository.findByName(name.trim());
     }
 
-    public List<Product> getProductsByPriceRange(double minPrice, double maxPrice) throws RuntimeException {
+    public List<Product> getProductsByPriceRange(double minPrice, double maxPrice) {
         if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice) {
-            throw new RuntimeException("Invalid price range. Min price must be >= 0 and <= max price");
+            throw new InvalidRequestException("Invalid price range. Min price must be >= 0 and <= max price");
         }
         return productRepository.findByPriceBetween(minPrice, maxPrice);
     }

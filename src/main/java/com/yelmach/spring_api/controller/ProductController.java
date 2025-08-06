@@ -33,169 +33,89 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping
-    public ResponseEntity<?> getAllProducts() {
-        try {
-            List<Product> products = productService.getAllProducts();
-            return ResponseEntity.ok(products);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching products: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> getAllProducts() {
+        List<Product> products = productService.getAllProducts();
+        return ResponseEntity.ok(products);
     }
 
     @PostMapping
-    public ResponseEntity<?> createProduct(@Valid @RequestBody ProductCreationRequest request) {
-        try {
-            Product savedProduct = productService.createProduct(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error creating product: " + e.getMessage()));
-        }
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductCreationRequest request) {
+        Product savedProduct = productService.createProduct(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
+    }
+
+    @PostMapping("/user/{userId}")
+    public ResponseEntity<Product> createProductForUser(@PathVariable String userId,
+            @Valid @RequestBody ProductCreationRequest request) {
+        Product savedProduct = productService.createProduct(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProductById(@PathVariable String id) {
-        try {
-            Optional<Product> product = productService.getProductById(id);
-            if (product.isPresent()) {
-                return ResponseEntity.ok(product.get());
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse("Product not found with id: " + id));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching product: " + e.getMessage()));
-        }
+    public ResponseEntity<Product> getProductById(@PathVariable String id) {
+        Optional<Product> product = productService.getProductById(id);
+        return product.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable String id, @Valid @RequestBody ProductUpdateRequest request) {
-        try {
-            Product updatedProduct = productService.updateProduct(id, request);
-            return ResponseEntity.ok(updatedProduct);
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("not found")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(createErrorResponse(e.getMessage()));
-            }
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error updating product: " + e.getMessage()));
-        }
+    public ResponseEntity<Product> updateProduct(@PathVariable String id,
+            @Valid @RequestBody ProductUpdateRequest request) {
+        Product updatedProduct = productService.updateProduct(id, request);
+        return ResponseEntity.ok(updatedProduct);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteProduct(@PathVariable String id) {
-        try {
-            productService.deleteProduct(id);
-            return ResponseEntity.ok(createSuccessResponse("Product with id " + id + " has been deleted"));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error deleting product: " + e.getMessage()));
-        }
+    public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String id) {
+        productService.deleteProduct(id);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Product with id " + id + " has been deleted");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getProductsByUserId(@PathVariable String userId) {
-        try {
-            List<Product> products = productService.getProductsByUserId(userId);
-            return ResponseEntity.ok(products);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching products for user: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> getProductsByUserId(@PathVariable String userId) {
+        List<Product> products = productService.getProductsByUserId(userId);
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/search")
-    public ResponseEntity<?> searchProducts(@RequestParam String name) {
-        try {
-            List<Product> products = productService.searchProducts(name);
-            return ResponseEntity.ok(products);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error searching products: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> searchProducts(@RequestParam String name) {
+        List<Product> products = productService.searchProducts(name);
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/price-range")
-    public ResponseEntity<?> getProductsByPriceRange(@RequestParam double minPrice, @RequestParam double maxPrice) {
-        try {
-            List<Product> products = productService.getProductsByPriceRange(minPrice, maxPrice);
-            return ResponseEntity.ok(products);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching products by price range: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> getProductsByPriceRange(@RequestParam double minPrice,
+            @RequestParam double maxPrice) {
+        List<Product> products = productService.getProductsByPriceRange(minPrice, maxPrice);
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/highest-price")
-    public ResponseEntity<?> getHighestPriceProducts() {
-        try {
-            List<Product> products = productService.getHighestPriceProducts();
-            return ResponseEntity.ok(products);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching most expensive products: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> getHighestPriceProducts() {
+        List<Product> products = productService.getHighestPriceProducts();
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/lowest-price")
-    public ResponseEntity<?> getLowestPriceProducts() {
-        try {
-            List<Product> products = productService.getLowestPriceProducts();
-            return ResponseEntity.ok(products);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching least expensive products: " + e.getMessage()));
-        }
+    public ResponseEntity<List<Product>> getLowestPriceProducts() {
+        List<Product> products = productService.getLowestPriceProducts();
+        return ResponseEntity.ok(products);
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<?> getProductStats() {
-        try {
-            Map<String, Object> stats = productService.getProductStats();
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error fetching product statistics: " + e.getMessage()));
-        }
+    public ResponseEntity<Map<String, Object>> getProductStats() {
+        Map<String, Object> stats = productService.getProductStats();
+        return ResponseEntity.ok(stats);
     }
 
     @PostMapping("/test")
-    public ResponseEntity<?> createTestProducts() {
-        try {
-            productService.createTestProducts();
-            return ResponseEntity.ok(createSuccessResponse(
-                    "Test products created successfully! Total products: " + productService.getProductCount()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(createErrorResponse("Error creating test products: " + e.getMessage()));
-        }
-    }
-
-    private Map<String, String> createErrorResponse(String message) {
+    public ResponseEntity<Map<String, String>> createTestProducts() {
+        productService.createTestProducts();
         Map<String, String> response = new HashMap<>();
-        response.put("error", message);
-        return response;
-    }
-
-    private Map<String, String> createSuccessResponse(String message) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", message);
-        return response;
+        response.put("message",
+                "Test products created successfully! Total products: " + productService.getProductCount());
+        return ResponseEntity.ok(response);
     }
 }
