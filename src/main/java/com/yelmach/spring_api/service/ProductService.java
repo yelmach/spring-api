@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.yelmach.spring_api.dto.request.ProductCreationRequest;
+import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
 import com.yelmach.spring_api.model.Product;
 import com.yelmach.spring_api.repository.ProductRepository;
 import com.yelmach.spring_api.repository.UserRepository;
@@ -25,16 +27,23 @@ public class ProductService {
         return productRepository.findAll();
     }
 
-    public Product createProduct(Product product) throws RuntimeException {
-        if (!product.getUserId().isEmpty()) {
-            if (!userRepository.existsById(product.getUserId())) {
-                throw new RuntimeException("User not found with id: " + product.getUserId());
+    public Product createProduct(ProductCreationRequest request, String userId) throws RuntimeException {
+        if (!userId.isEmpty()) {
+            if (!userRepository.existsById(userId)) {
+                throw new RuntimeException("User not found with id: " + userId);
             }
 
-            if (productRepository.existsByNameAndUserId(product.getName(), product.getUserId())) {
+            if (productRepository.existsByNameAndUserId(request.name(), userId)) {
                 throw new RuntimeException("Product with this name already exists for this user");
             }
         }
+
+        Product product = new Product(request.name(), request.description(), request.price(), userId);
+        return productRepository.save(product);
+    }
+
+    public Product createProduct(ProductCreationRequest request) throws RuntimeException {
+        Product product = new Product(request.name(), request.description(), request.price());
         return productRepository.save(product);
     }
 
@@ -42,7 +51,7 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
-    public Product updateProduct(String id, Product productDetails) throws RuntimeException {
+    public Product updateProduct(String id, ProductUpdateRequest request) throws RuntimeException {
         Optional<Product> optionalProduct = productRepository.findById(id);
 
         if (!optionalProduct.isPresent()) {
@@ -51,13 +60,15 @@ public class ProductService {
 
         Product product = optionalProduct.get();
 
-        if (!productDetails.getUserId().isEmpty() && !userRepository.existsById(productDetails.getUserId())) {
-            throw new RuntimeException("User not found with id: " + productDetails.getUserId());
+        if (request.name() != null) {
+            product.setName(request.name());
         }
-
-        product.setName(productDetails.getName());
-        product.setDescription(productDetails.getDescription());
-        product.setPrice(productDetails.getPrice());
+        if (request.description() != null) {
+            product.setDescription(request.description());
+        }
+        if (request.price() != null) {
+            product.setPrice(request.price());
+        }
 
         return productRepository.save(product);
     }

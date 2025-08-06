@@ -10,14 +10,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.yelmach.spring_api.model.User;
+import com.yelmach.spring_api.dto.request.UserRegistrationRequest;
+import com.yelmach.spring_api.dto.request.UserUpdateRequest;
+import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.service.UserService;
 
 import jakarta.validation.Valid;
@@ -29,14 +31,14 @@ public class UserController {
     private UserService userService;
 
     @GetMapping
-    public List<User> getAllUsers() {
+    public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@Valid @RequestBody User user) {
+    public ResponseEntity<?> createUser(@Valid @RequestBody UserRegistrationRequest request) {
         try {
-            User savedUser = userService.createUser(user);
+            UserResponse savedUser = userService.createUser(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
@@ -49,7 +51,7 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable String id) {
         try {
-            Optional<User> user = userService.getUserById(id);
+            Optional<UserResponse> user = userService.getUserById(id);
             if (user.isPresent()) {
                 return ResponseEntity.ok(user.get());
             } else {
@@ -62,10 +64,10 @@ public class UserController {
         }
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable String id, @Valid @RequestBody User userDetails) {
+    @PatchMapping("/{id}")
+    public ResponseEntity<?> updateUser(@PathVariable String id, @Valid @RequestBody UserUpdateRequest request) {
         try {
-            User updatedUser = userService.updateUser(id, userDetails);
+            UserResponse updatedUser = userService.updateUser(id, request);
             return ResponseEntity.ok(updatedUser);
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
@@ -97,7 +99,7 @@ public class UserController {
     public ResponseEntity<?> searchUsers(@RequestParam(required = false) String name,
             @RequestParam(required = false) String email) {
         try {
-            List<User> users = userService.searchUsers(name, email);
+            List<UserResponse> users = userService.searchUsers(name, email);
             return ResponseEntity.ok(users);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));

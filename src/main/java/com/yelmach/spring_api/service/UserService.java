@@ -8,6 +8,9 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.yelmach.spring_api.dto.request.UserRegistrationRequest;
+import com.yelmach.spring_api.dto.request.UserUpdateRequest;
+import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.repository.UserRepository;
@@ -18,22 +21,28 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::convertToUserResponse)
+                .toList();
     }
 
-    public User createUser(User user) throws RuntimeException {
-        if (userRepository.existsByEmail(user.getEmail())) {
+    public UserResponse createUser(UserRegistrationRequest request) throws RuntimeException {
+        if (userRepository.existsByEmail(request.email())) {
             throw new RuntimeException("Email already exists");
         }
-        return userRepository.save(user);
+
+        User user = new User(request.name(), request.email(), request.password());
+        User savedUser = userRepository.save(user);
+        return convertToUserResponse(savedUser);
     }
 
-    public Optional<User> getUserById(String id) {
-        return userRepository.findById(id);
+    public Optional<UserResponse> getUserById(String id) {
+        return userRepository.findById(id)
+                .map(this::convertToUserResponse);
     }
 
-    public User updateUser(String id, User userDetails) throws RuntimeException {
+    public UserResponse updateUser(String id, UserUpdateRequest request) throws RuntimeException {
         Optional<User> optionalUser = userRepository.findById(id);
 
         if (!optionalUser.isPresent()) {
@@ -42,28 +51,28 @@ public class UserService {
 
         User user = optionalUser.get();
 
-        if (!user.getName().equals(userDetails.getName()) &&
-                userRepository.existsByName(userDetails.getName())) {
-            throw new RuntimeException("Name already exists");
+        if (!user.getName().equals(request.name()) &&
+                userRepository.existsByName(request.name())) {
+            throw new RuntimeException("Username already exists");
         }
 
-        if (!user.getEmail().equals(userDetails.getEmail()) &&
-                userRepository.existsByEmail(userDetails.getEmail())) {
+        if (!user.getEmail().equals(request.email()) &&
+                userRepository.existsByEmail(request.email())) {
             throw new RuntimeException("Email already exists");
         }
 
-        user.setName(userDetails.getName());
-        user.setEmail(userDetails.getEmail());
-
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(userDetails.getPassword());
+        if (request.name() != null) {
+            user.setName(request.name());
+        }
+        if (request.email() != null) {
+            user.setEmail(request.email());
+        }
+        if (request.password() != null && !request.password().isEmpty()) {
+            user.setPassword(request.password());
         }
 
-        if (userDetails.getRole() != null) {
-            user.setRole(userDetails.getRole());
-        }
-
-        return userRepository.save(user);
+        User updatedUser = userRepository.save(user);
+        return convertToUserResponse(updatedUser);
     }
 
     public void deleteUser(String id) throws RuntimeException {
@@ -73,16 +82,21 @@ public class UserService {
         userRepository.deleteById(id);
     }
 
-    public List<User> searchUsers(String name, String email) throws RuntimeException {
+    public List<UserResponse> searchUsers(String name, String email) throws RuntimeException {
         if ((name.isEmpty()) && (email.isEmpty())) {
             throw new RuntimeException("Please provide either name or email parameter");
         }
 
+        List<User> users;
         if (!name.isEmpty()) {
-            return userRepository.findByNameContainingIgnoreCase(name);
+            users = userRepository.findByNameContainingIgnoreCase(name);
         } else {
-            return userRepository.findByEmailContainingIgnoreCase(email);
+            users = userRepository.findByEmailContainingIgnoreCase(email);
         }
+
+        return users.stream()
+                .map(this::convertToUserResponse)
+                .toList();
     }
 
     public Map<String, Object> getUserStats() {
@@ -114,5 +128,9 @@ public class UserService {
 
     public long getUserCount() {
         return userRepository.count();
+    }
+
+    private UserResponse convertToUserResponse(User user) {
+        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 }

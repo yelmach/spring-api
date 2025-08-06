@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.yelmach.spring_api.dto.request.ProductCreationRequest;
+import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
 import com.yelmach.spring_api.model.Product;
 import com.yelmach.spring_api.service.ProductService;
 
@@ -42,9 +44,9 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createProduct(@Valid @RequestBody Product product) {
+    public ResponseEntity<?> createProduct(@Valid @RequestBody ProductCreationRequest request) {
         try {
-            Product savedProduct = productService.createProduct(product);
+            Product savedProduct = productService.createProduct(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(createErrorResponse(e.getMessage()));
@@ -71,9 +73,9 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable String id, @Valid @RequestBody Product productDetails) {
+    public ResponseEntity<?> updateProduct(@PathVariable String id, @Valid @RequestBody ProductUpdateRequest request) {
         try {
-            Product updatedProduct = productService.updateProduct(id, productDetails);
+            Product updatedProduct = productService.updateProduct(id, request);
             return ResponseEntity.ok(updatedProduct);
         } catch (RuntimeException e) {
             if (e.getMessage().contains("not found")) {
