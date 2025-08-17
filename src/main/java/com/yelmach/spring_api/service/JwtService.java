@@ -8,6 +8,7 @@ import java.util.function.Function;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.model.User;
 
@@ -19,6 +20,7 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 
+@Service
 public class JwtService {
     @Value("${app.jwt.secret:mySecretKey}")
     private String jwtSecret;

@@ -30,6 +30,9 @@ public class Product {
     @NotBlank(message = "User ID is required")
     private String userId;
 
+    public Product() {
+    }
+
     public Product(String name, String description, double price) {
         this.name = name;
         this.description = description;
