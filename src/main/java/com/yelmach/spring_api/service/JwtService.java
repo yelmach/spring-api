@@ -22,10 +22,10 @@ import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
-    @Value("${app.jwt.secret:mySecretKey}")
+    @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration:86400000}") // 24 hours in milliseconds
+    @Value("${app.jwt.expiration}") // 24 hours in milliseconds
     private long jwtExpirationMs;
 
     private Key getSigningKey() {
@@ -39,23 +39,18 @@ public class JwtService {
         claims.put("role", user.getRole().name());
         claims.put("name", user.getName());
 
-        return createToken(claims, user.getEmail());
-    }
-
-    private String createToken(Map<String, Object> claims, String subject) {
         Date now = new Date();
         Date expireDate = new Date(now.getTime() + jwtExpirationMs);
 
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
+        return Jwts.builder().setClaims(claims)
+                .setSubject(user.getEmail())
                 .setIssuedAt(now)
                 .setExpiration(expireDate)
                 .signWith(getSigningKey())
                 .compact();
     }
 
-    public String extractUsername(String token) {
+    public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
@@ -102,12 +97,27 @@ public class JwtService {
         }
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
+    public boolean isValidToken(String token, UserDetails userDetails) {
         try {
-            final String username = extractUsername(token);
+            final String username = extractEmail(token);
             return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
         } catch (JwtException e) {
             return false;
+        }
+    }
+
+    public boolean isValidToken(String token) {
+        try {
+            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
+            return true;
+        } catch (ExpiredJwtException e) {
+            throw new JwtException("JWT token is expired", e);
+        } catch (UnsupportedJwtException e) {
+            throw new JwtException("JWT token is unsupported", e);
+        } catch (MalformedJwtException e) {
+            throw new JwtException("JWT token is malformed", e);
+        } catch (SecurityException | IllegalArgumentException e) {
+            throw new JwtException("JWT token signature validation failed", e);
         }
     }
 

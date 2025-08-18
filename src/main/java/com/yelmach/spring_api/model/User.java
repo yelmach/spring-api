@@ -38,11 +38,6 @@ public class User implements UserDetails {
 
     private Role role;
 
-    private boolean enabled = true;
-    private boolean accountNonExpired = true;
-    private boolean accountNonLocked = true;
-    private boolean credentialsNonExpired = true;
-
     public User() {
     }
 
@@ -72,38 +67,22 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return accountNonExpired;
-    }
-
-    public void setAccountNonExpired(boolean accountNonExpired) {
-        this.accountNonExpired = accountNonExpired;
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return accountNonLocked;
-    }
-
-    public void setAccountNonLocked(boolean accountNonLocked) {
-        this.accountNonLocked = accountNonLocked;
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return credentialsNonExpired;
-    }
-
-    public void setCredentialsNonExpired(boolean credentialsNonExpired) {
-        this.credentialsNonExpired = credentialsNonExpired;
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+        return true;
     }
 
     public String getId() {
