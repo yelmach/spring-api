@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
 import com.yelmach.spring_api.model.Product;
+import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.ProductService;
 
 import jakarta.validation.Valid;
@@ -38,12 +41,6 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @PostMapping
-    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductCreationRequest request) {
-        Product savedProduct = productService.createProduct(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
-    }
-
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable String id) {
         Optional<Product> product = productService.getProductById(id);
@@ -51,37 +48,9 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String id,
-            @Valid @RequestBody ProductUpdateRequest request) {
-        Product updatedProduct = productService.updateProduct(id, request);
-        return ResponseEntity.ok(updatedProduct);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String id) {
-        productService.deleteProduct(id);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Product with id " + id + " has been deleted");
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Product>> getProductsByUserId(@PathVariable String userId) {
-        List<Product> products = productService.getProductsByUserId(userId);
-        return ResponseEntity.ok(products);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Product>> searchProducts(@RequestParam String name) {
-        List<Product> products = productService.searchProducts(name);
-        return ResponseEntity.ok(products);
-    }
-
     @GetMapping("/price-range")
-    public ResponseEntity<List<Product>> getProductsByPriceRange(@RequestParam double minPrice,
-            @RequestParam double maxPrice) {
-        List<Product> products = productService.getProductsByPriceRange(minPrice, maxPrice);
+    public ResponseEntity<List<Product>> getProductsByPriceRange(@RequestParam double min, @RequestParam double max) {
+        List<Product> products = productService.getProductsByPriceRange(min, max);
         return ResponseEntity.ok(products);
     }
 
@@ -97,10 +66,59 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<Product>> searchProducts(@RequestParam String name) {
+        List<Product> products = productService.searchProducts(name);
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<Product>> getMyProducts() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String userId = currentUser.getId();
+
+        List<Product> products = productService.getProductsByUserId(userId);
+        return ResponseEntity.ok(products);
+    }
+
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getProductStats() {
         Map<String, Object> stats = productService.getProductStats();
         return ResponseEntity.ok(stats);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String id) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String userId = currentUser.getId();
+
+        productService.deleteProductByIdAndUserId(id, userId);
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Product with id " + id + " has been deleted");
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<Product> updateProduct(@PathVariable String id,
+            @Valid @RequestBody ProductUpdateRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String userId = currentUser.getId();
+
+        Product updatedProduct = productService.updateProductByIdAndUserId(id, request, userId);
+        return ResponseEntity.ok(updatedProduct);
+    }
+
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductCreationRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String userId = currentUser.getId();
+
+        Product savedProduct = productService.createProduct(request, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
     }
 
     @PostMapping("/test")

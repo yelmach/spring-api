@@ -7,6 +7,8 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.yelmach.spring_api.dto.request.UserUpdateRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
+import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.UserService;
 
 import jakarta.validation.Valid;
@@ -42,11 +45,16 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<UserResponse> updateUser(@PathVariable String id,
-            @Valid @RequestBody UserUpdateRequest request) {
-        UserResponse updatedUser = userService.updateUser(id, request);
-        return ResponseEntity.ok(updatedUser);
+    @GetMapping("/search")
+    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String email) {
+        List<UserResponse> users = userService.searchUsersByEmail(email);
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getUserStats() {
+        Map<String, Object> stats = userService.getUserStats();
+        return ResponseEntity.ok(stats);
     }
 
     @DeleteMapping("/{id}")
@@ -57,20 +65,17 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam(required = false) String name,
-            @RequestParam(required = false) String email) {
-        List<UserResponse> users = userService.searchUsers(name, email);
-        return ResponseEntity.ok(users);
+    @PatchMapping
+    public ResponseEntity<UserResponse> updateMyUser(@Valid @RequestBody UserUpdateRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String userId = currentUser.getId();
+
+        UserResponse updatedUser = userService.updateUser(userId, request);
+        return ResponseEntity.ok(updatedUser);
     }
 
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getUserStats() {
-        Map<String, Object> stats = userService.getUserStats();
-        return ResponseEntity.ok(stats);
-    }
-
-    @PostMapping("/test")
+    @PostMapping
     public ResponseEntity<Map<String, String>> createTestUsers() {
         userService.createTestUsers();
         Map<String, String> response = new HashMap<>();

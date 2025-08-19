@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
-import com.yelmach.spring_api.exception.DuplicateResourceException;
 import com.yelmach.spring_api.exception.InvalidRequestException;
 import com.yelmach.spring_api.exception.ResourceNotFoundException;
 import com.yelmach.spring_api.model.Product;
@@ -31,13 +30,9 @@ public class ProductService {
     }
 
     public Product createProduct(ProductCreationRequest request, String userId) {
-        if (!userId.isEmpty()) {
+        if (userId != null && !userId.isEmpty()) {
             if (!userRepository.existsById(userId)) {
                 throw new ResourceNotFoundException("User not found with id: " + userId);
-            }
-
-            if (productRepository.existsByNameAndUserId(request.name(), userId)) {
-                throw new DuplicateResourceException("Product with this name already exists for this user");
             }
         }
 
@@ -45,16 +40,11 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public Product createProduct(ProductCreationRequest request) {
-        Product product = new Product(request.name(), request.description(), request.price());
-        return productRepository.save(product);
-    }
-
     public Optional<Product> getProductById(String id) {
         return productRepository.findById(id);
     }
 
-    public Product updateProduct(String id, ProductUpdateRequest request) {
+    public Product updateProductByIdAndUserId(String id, ProductUpdateRequest request, String userId) {
         Optional<Product> optionalProduct = productRepository.findById(id);
 
         if (!optionalProduct.isPresent()) {
@@ -62,6 +52,10 @@ public class ProductService {
         }
 
         Product product = optionalProduct.get();
+
+        if (product.getUserId() != null && !product.getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("you don't have permission to update it");
+        }
 
         if (request.name() != null) {
             product.setName(request.name());
@@ -76,10 +70,19 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public void deleteProduct(String id) {
-        if (!productRepository.existsById(id)) {
+    public void deleteProductByIdAndUserId(String id, String userId) {
+        Optional<Product> optionalProduct = productRepository.findById(id);
+
+        if (!optionalProduct.isPresent()) {
             throw new ResourceNotFoundException("Product not found with id: " + id);
         }
+
+        Product product = optionalProduct.get();
+
+        if (product.getUserId() != null && !product.getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("you don't have permission to delete it");
+        }
+
         productRepository.deleteById(id);
     }
 
@@ -91,10 +94,10 @@ public class ProductService {
     }
 
     public List<Product> searchProducts(String name) {
-        if (name.trim().isEmpty()) {
-            throw new InvalidRequestException("Search query cannot be empty");
+        if (name == null || name.trim().isEmpty()) {
+            throw new InvalidRequestException("Name parameter is required");
         }
-        return productRepository.findByName(name.trim());
+        return productRepository.findByNameContainingIgnoreCase(name.trim());
     }
 
     public List<Product> getProductsByPriceRange(double minPrice, double maxPrice) {
