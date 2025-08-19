@@ -14,6 +14,7 @@ import com.yelmach.spring_api.exception.AuthenticationException;
 import com.yelmach.spring_api.exception.DuplicateResourceException;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.repository.UserRepository;
+import com.yelmach.spring_api.security.JwtProvider;
 
 @Service
 public class AuthService {
@@ -25,7 +26,7 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private JwtProvider jwtService;
 
     public AuthResponse authenticateUser(LoginRequest loginRequest) {
         Optional<User> userOptional = userRepository.findByEmail(loginRequest.email());

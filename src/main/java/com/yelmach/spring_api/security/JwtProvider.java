@@ -1,4 +1,4 @@
-package com.yelmach.spring_api.service;
+package com.yelmach.spring_api.security;
 
 import java.security.Key;
 import java.util.Date;
@@ -21,7 +21,7 @@ import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 
 @Service
-public class JwtService {
+public class JwtProvider {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
