@@ -7,20 +7,17 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.yelmach.spring_api.dto.request.UpdateUserRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
-import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.UserService;
 
 import jakarta.validation.Valid;
@@ -38,16 +35,30 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable String id) {
+    public ResponseEntity<UserResponse> getUserById(@NonNull @PathVariable String id) {
         Optional<UserResponse> user = userService.getUserById(id);
         return user.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<UserResponse>> searchUsers(@RequestParam String email) {
-        List<UserResponse> users = userService.searchUsersByEmail(email);
-        return ResponseEntity.ok(users);
+    @PatchMapping
+    public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest request) {
+        UserResponse user = userService.getCurrentUser();
+
+        UserResponse updatedUser = userService.updateUser(user.id(), request);
+        return ResponseEntity.ok(updatedUser);
+    }
+
+    @DeleteMapping()
+    public ResponseEntity<Map<String, Object>> deleteUser() {
+        UserResponse user = userService.getCurrentUser();
+
+        UserResponse deletedUser = userService.deleteUser(user.id());
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "User has been deleted");
+        response.put("userDetails", deletedUser);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/stats")
@@ -57,20 +68,13 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable String id) {
-        userService.deleteUser(id);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "User with id " + id + " has been deleted");
+    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String id) {
+        UserResponse deletedUser = userService.deleteUser(id);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "User has been deleted");
+        response.put("userDetails", deletedUser);
+
         return ResponseEntity.ok(response);
-    }
-
-    @PatchMapping
-    public ResponseEntity<UserResponse> updateMyUser(@Valid @RequestBody UpdateUserRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String userId = currentUser.getId();
-
-        UserResponse updatedUser = userService.updateUser(userId, request);
-        return ResponseEntity.ok(updatedUser);
     }
 }

@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,9 +14,7 @@ import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.UpdateUserRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
-import com.yelmach.spring_api.exception.DuplicateResourceException;
-import com.yelmach.spring_api.exception.InvalidRequestException;
-import com.yelmach.spring_api.exception.ResourceNotFoundException;
+import com.yelmach.spring_api.exception.ApiException;
 import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.repository.UserRepository;
@@ -38,27 +37,22 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(this::convertToUserResponse)
+                .map(UserResponse::fromUser)
                 .toList();
     }
 
-    public Optional<UserResponse> getUserById(String id) {
+    public Optional<UserResponse> getUserById(@NonNull String id) {
         return userRepository.findById(id)
-                .map(this::convertToUserResponse);
+                .map(UserResponse::fromUser);
     }
 
-    public UserResponse updateUser(String id, UpdateUserRequest request) {
-        Optional<User> optionalUser = userRepository.findById(id);
-
-        if (!optionalUser.isPresent()) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
-        }
-
-        User user = optionalUser.get();
+    public UserResponse updateUser(@NonNull String id, UpdateUserRequest request) {
+        User user = userRepository.findById(id).orElseThrow(
+                () -> ApiException.notFound("User not found with id: " + id));
 
         if (request.email() != null && !user.getEmail().equals(request.email()) &&
                 userRepository.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("Email already exists");
+            throw ApiException.conflict("Email already exists");
         }
 
         if (request.name() != null) {
@@ -74,25 +68,15 @@ public class UserService {
         }
 
         User updatedUser = userRepository.save(user);
-        return convertToUserResponse(updatedUser);
+        return UserResponse.fromUser(updatedUser);
     }
 
-    public void deleteUser(String id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
-        }
+    public UserResponse deleteUser(String id) {
+        User user = userRepository.findById(id).orElseThrow(
+                () -> ApiException.notFound("User not found with id: " + id));
+
         userRepository.deleteById(id);
-    }
-
-    public List<UserResponse> searchUsersByEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            throw new InvalidRequestException("Email parameter is required");
-        }
-
-        List<User> users = userRepository.findByEmailContainingIgnoreCase(email.trim());
-        return users.stream()
-                .map(this::convertToUserResponse)
-                .toList();
+        return UserResponse.fromUser(user);
     }
 
     public Map<String, Object> getUserStats() {
@@ -101,13 +85,5 @@ public class UserService {
         stats.put("adminCount", userRepository.countByRole(Role.ADMIN));
         stats.put("userCount", userRepository.countByRole(Role.USER));
         return stats;
-    }
-
-    public long getUserCount() {
-        return userRepository.count();
-    }
-
-    private UserResponse convertToUserResponse(User user) {
-        return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 }
