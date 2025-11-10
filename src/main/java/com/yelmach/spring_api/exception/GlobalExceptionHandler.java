@@ -143,7 +143,6 @@ public class GlobalExceptionHandler {
                                 HttpStatus.BAD_REQUEST.value(),
                                 "Validation Failed",
                                 "Request validation failed",
-                                getPath(request),
                                 details);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);

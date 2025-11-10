@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.yelmach.spring_api.dto.request.LoginRequest;
-import com.yelmach.spring_api.dto.request.UserRegistrationRequest;
+import com.yelmach.spring_api.dto.request.RegisterRequest;
 import com.yelmach.spring_api.dto.response.AuthResponse;
 import com.yelmach.spring_api.service.AuthService;
 
@@ -29,7 +29,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody UserRegistrationRequest registrationRequest) {
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest registrationRequest) {
         AuthResponse authResponse = authService.registerUser(registrationRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
     }

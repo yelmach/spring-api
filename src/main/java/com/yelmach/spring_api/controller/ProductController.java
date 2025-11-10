@@ -120,13 +120,4 @@ public class ProductController {
         Product savedProduct = productService.createProduct(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
     }
-
-    @PostMapping("/test")
-    public ResponseEntity<Map<String, String>> createTestProducts() {
-        productService.createTestProducts();
-        Map<String, String> response = new HashMap<>();
-        response.put("message",
-                "Test products created successfully! Total products: " + productService.getProductCount());
-        return ResponseEntity.ok(response);
-    }
 }

@@ -1,7 +1,5 @@
 package com.yelmach.spring_api.dto.response;
 
-import java.util.List;
-
 public record ErrorResponse(
         int status,
 
@@ -9,10 +7,8 @@ public record ErrorResponse(
 
         String message,
 
-        String path,
-
-        List<String> details) {
-    public ErrorResponse(int status, String error, String message, String path) {
-        this(status, error, message, path, null);
+        Object details) {
+    public ErrorResponse(int status, String error, String message) {
+        this(status, error, message, null);
     }
 }

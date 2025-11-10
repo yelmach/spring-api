@@ -7,7 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.LoginRequest;
-import com.yelmach.spring_api.dto.request.UserRegistrationRequest;
+import com.yelmach.spring_api.dto.request.RegisterRequest;
 import com.yelmach.spring_api.dto.response.AuthResponse;
 import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.exception.AuthenticationException;
@@ -48,7 +48,7 @@ public class AuthService {
         return new AuthResponse(token, userResponse);
     }
 
-    public AuthResponse registerUser(UserRegistrationRequest registrationRequest) {
+    public AuthResponse registerUser(RegisterRequest registrationRequest) {
         if (userRepository.existsByEmail(registrationRequest.email())) {
             throw new DuplicateResourceException("Email is already registered");
         }

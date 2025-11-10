@@ -133,16 +133,6 @@ public class ProductService {
         return stats;
     }
 
-    public void createTestProducts() {
-        Product product1 = new Product("Laptop", "Gaming laptop", 999.99);
-        Product product2 = new Product("Mouse", "Wireless mouse", 25.50);
-        Product product3 = new Product("Keyboard", "Mechanical keyboard", 75.00);
-
-        productRepository.save(product1);
-        productRepository.save(product2);
-        productRepository.save(product3);
-    }
-
     public long getProductCount() {
         return productRepository.count();
     }

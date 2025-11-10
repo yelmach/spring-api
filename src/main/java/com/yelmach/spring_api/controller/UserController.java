@@ -13,13 +13,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.yelmach.spring_api.dto.request.UserUpdateRequest;
+import com.yelmach.spring_api.dto.request.UpdateUserRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.UserService;
@@ -66,20 +65,12 @@ public class UserController {
     }
 
     @PatchMapping
-    public ResponseEntity<UserResponse> updateMyUser(@Valid @RequestBody UserUpdateRequest request) {
+    public ResponseEntity<UserResponse> updateMyUser(@Valid @RequestBody UpdateUserRequest request) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
         String userId = currentUser.getId();
 
         UserResponse updatedUser = userService.updateUser(userId, request);
         return ResponseEntity.ok(updatedUser);
-    }
-
-    @PostMapping
-    public ResponseEntity<Map<String, String>> createTestUsers() {
-        userService.createTestUsers();
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Test users created successfully! Total users: " + userService.getUserCount());
-        return ResponseEntity.ok(response);
     }
 }

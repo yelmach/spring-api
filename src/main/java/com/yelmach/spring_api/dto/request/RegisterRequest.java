@@ -2,11 +2,13 @@ package com.yelmach.spring_api.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public record UserRegistrationRequest(
+public record RegisterRequest(
     @NotBlank(message = "Name is required")
-    @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
+    @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Name must contain only letters and spaces")
     String name,
 
     @NotBlank(message = "Email is required")

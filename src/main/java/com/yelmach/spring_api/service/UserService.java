@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.yelmach.spring_api.dto.request.UserUpdateRequest;
+import com.yelmach.spring_api.dto.request.UpdateUserRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.exception.DuplicateResourceException;
 import com.yelmach.spring_api.exception.InvalidRequestException;
@@ -38,7 +38,7 @@ public class UserService {
                 .map(this::convertToUserResponse);
     }
 
-    public UserResponse updateUser(String id, UserUpdateRequest request) {
+    public UserResponse updateUser(String id, UpdateUserRequest request) {
         Optional<User> optionalUser = userRepository.findById(id);
 
         if (!optionalUser.isPresent()) {
@@ -92,23 +92,6 @@ public class UserService {
         stats.put("adminCount", userRepository.countByRole(Role.ADMIN));
         stats.put("userCount", userRepository.countByRole(Role.USER));
         return stats;
-    }
-
-    public void createTestUsers() {
-        User admin = new User("admin", "admin@admin.com", passwordEncoder.encode("admin123"), Role.ADMIN);
-        if (!userRepository.existsByEmail("admin@admin.com")) {
-            userRepository.save(admin);
-        }
-
-        User user1 = new User("user1", "user1@user.com", passwordEncoder.encode("user123"));
-        User user2 = new User("user2", "user2@user.com", passwordEncoder.encode("user123"));
-
-        if (!userRepository.existsByEmail("user1@user.com")) {
-            userRepository.save(user1);
-        }
-        if (!userRepository.existsByEmail("user2@user.com")) {
-            userRepository.save(user2);
-        }
     }
 
     public long getUserCount() {
