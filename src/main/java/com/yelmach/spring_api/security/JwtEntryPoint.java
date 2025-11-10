@@ -17,6 +17,8 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtEntryPoint implements AuthenticationEntryPoint {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException authException) throws IOException, ServletException {
@@ -25,32 +27,15 @@ public class JwtEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 
         String errorMessage = "Authentication required to access this resource";
-        String errorType = "Unauthorized";
 
         Object jwtError = request.getAttribute("jwt_error");
         if (jwtError != null) {
             errorMessage = jwtError.toString();
-            errorType = "Invalid Token";
-        } else if (authException.getMessage() != null) {
-            if (authException.getMessage().contains("expired")) {
-                errorMessage = "Token has expired. Please login again.";
-                errorType = "Token Expired";
-            } else if (authException.getMessage().contains("malformed")) {
-                errorMessage = "Invalid token format";
-                errorType = "Malformed Token";
-            } else if (authException.getMessage().contains("signature")) {
-                errorMessage = "Token signature verification failed";
-                errorType = "Invalid Signature";
-            }
         }
 
-        ErrorResponse errorResponse = new ErrorResponse(
-                HttpServletResponse.SC_UNAUTHORIZED,
-                errorType,
-                errorMessage,
-                request.getRequestURI());
+        ErrorResponse err = new ErrorResponse(401, "Unauthorized", errorMessage);
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.writeValue(response.getOutputStream(), errorResponse);
+        String jsonResponse = objectMapper.writeValueAsString(err);
+        response.getWriter().write(jsonResponse);
     }
 }
