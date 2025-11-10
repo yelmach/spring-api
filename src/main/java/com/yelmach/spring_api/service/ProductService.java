@@ -11,8 +11,6 @@ import org.springframework.stereotype.Service;
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
 import com.yelmach.spring_api.exception.ApiException;
-import com.yelmach.spring_api.exception.InvalidRequestException;
-import com.yelmach.spring_api.exception.ResourceNotFoundException;
 import com.yelmach.spring_api.model.Product;
 import com.yelmach.spring_api.repository.ProductRepository;
 import com.yelmach.spring_api.repository.UserRepository;

@@ -1,15 +1,15 @@
 package com.yelmach.spring_api.exception;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mongodb.MongoException;
 import com.yelmach.spring_api.dto.response.ErrorResponse;
 
@@ -28,56 +27,15 @@ import io.jsonwebtoken.JwtException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-        @ExceptionHandler(ResourceNotFoundException.class)
-        public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex,
-                        WebRequest request) {
+        @ExceptionHandler(ApiException.class)
+        public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
                 ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.NOT_FOUND.value(),
-                                "Resource Not Found",
+                                ex.getStatus(),
+                                ex.getError(),
                                 ex.getMessage(),
-                                getPath(request));
+                                ex.getData());
 
-                return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-        }
-
-        @ExceptionHandler(DuplicateResourceException.class)
-        public ResponseEntity<ErrorResponse> handleDuplicateResourceException(DuplicateResourceException ex,
-                        WebRequest request) {
-
-                ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.CONFLICT.value(),
-                                "Duplicate Resource",
-                                ex.getMessage(),
-                                getPath(request));
-
-                return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
-        }
-
-        @ExceptionHandler(InvalidRequestException.class)
-        public ResponseEntity<ErrorResponse> handleInvalidRequestException(InvalidRequestException ex,
-                        WebRequest request) {
-
-                ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.BAD_REQUEST.value(),
-                                "Invalid Request",
-                                ex.getMessage(),
-                                getPath(request));
-
-                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        }
-
-        @ExceptionHandler(com.yelmach.spring_api.exception.AuthenticationException.class)
-        public ResponseEntity<ErrorResponse> handleCustomAuthenticationException(
-                        com.yelmach.spring_api.exception.AuthenticationException ex,
-                        WebRequest request) {
-
-                ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.UNAUTHORIZED.value(),
-                                "Authentication Failed",
-                                ex.getMessage(),
-                                getPath(request));
-
-                return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+                return ResponseEntity.status(ex.getStatus()).body(errorResponse);
         }
 
         @ExceptionHandler(AuthenticationException.class)
@@ -87,8 +45,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.UNAUTHORIZED.value(),
                                 "Authentication Failed",
-                                "Invalid credentials or authentication required",
-                                getPath(request));
+                                "Invalid credentials or authentication required");
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
@@ -99,11 +56,20 @@ public class GlobalExceptionHandler {
 
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.UNAUTHORIZED.value(),
-                                "Invalid Credentials",
-                                "The provided credentials are invalid",
-                                getPath(request));
+                                "Unauthorized",
+                                "Invalid credentials");
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+        }
+
+        @ExceptionHandler(UsernameNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleUsernameNotFound(UsernameNotFoundException ex) {
+                ErrorResponse errorResponse = new ErrorResponse(
+                                404,
+                                "Not Found",
+                                "User not found");
+
+                return ResponseEntity.status(404).body(errorResponse);
         }
 
         @ExceptionHandler(AccessDeniedException.class)
@@ -112,8 +78,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.FORBIDDEN.value(),
                                 "Access Denied",
-                                "You don't have permission to access this resource",
-                                getPath(request));
+                                "You don't have permission to access this resource");
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
         }
@@ -124,8 +89,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.UNAUTHORIZED.value(),
                                 "JWT Error",
-                                "Invalid or expired token: " + ex.getMessage(),
-                                getPath(request));
+                                ex.getMessage());
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
         }
@@ -133,19 +97,19 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex,
                         WebRequest request) {
+                Map<String, String> fieldErrors = new HashMap<>();
 
-                List<String> details = new ArrayList<>();
                 for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-                        details.add(error.getField() + ": " + error.getDefaultMessage());
+                        fieldErrors.put(error.getField(), error.getDefaultMessage());
                 }
 
                 ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.BAD_REQUEST.value(),
+                                400,
                                 "Validation Failed",
-                                "Request validation failed",
-                                details);
+                                "Please check your input data",
+                                fieldErrors);
 
-                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+                return ResponseEntity.badRequest().body(errorResponse);
         }
 
         @ExceptionHandler(IllegalArgumentException.class)
@@ -155,26 +119,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.BAD_REQUEST.value(),
                                 "Invalid Argument",
-                                ex.getMessage(),
-                                getPath(request));
-
-                return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-        }
-
-        @ExceptionHandler(HttpMessageNotReadableException.class)
-        public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex,
-                        WebRequest request) {
-
-                String message = "Invalid JSON format or malformed request body";
-                if (ex.getCause() instanceof JsonProcessingException) {
-                        message = "JSON parsing error: " + ex.getCause().getMessage();
-                }
-
-                ErrorResponse errorResponse = new ErrorResponse(
-                                HttpStatus.BAD_REQUEST.value(),
-                                "Malformed Request",
-                                message,
-                                getPath(request));
+                                ex.getMessage());
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
@@ -190,8 +135,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.BAD_REQUEST.value(),
                                 "Invalid Parameter Type",
-                                message,
-                                getPath(request));
+                                message);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
@@ -206,8 +150,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.BAD_REQUEST.value(),
                                 "Missing Parameter",
-                                message,
-                                getPath(request));
+                                message);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
@@ -224,8 +167,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.METHOD_NOT_ALLOWED.value(),
                                 "Method Not Allowed",
-                                message,
-                                getPath(request));
+                                message);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -241,8 +183,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
                                 "Unsupported Media Type",
-                                message,
-                                getPath(request));
+                                message);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
@@ -262,8 +203,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.CONFLICT.value(),
                                 "Duplicate Entry",
-                                message,
-                                getPath(request));
+                                message);
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
         }
@@ -274,8 +214,7 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                                 "Database Error",
-                                "Database service is temporarily unavailable. Please try again later.",
-                                getPath(request));
+                                "Database service is temporarily unavailable. Please try again later.");
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.SERVICE_UNAVAILABLE);
         }
@@ -287,17 +226,8 @@ public class GlobalExceptionHandler {
                 ErrorResponse errorResponse = new ErrorResponse(
                                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                                 "Internal Server Error",
-                                "An unexpected error occurred. Please try again later.",
-                                getPath(request));
+                                "An unexpected error occurred. Please try again later.");
 
                 return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        private String getPath(WebRequest request) {
-                String description = request.getDescription(false);
-                if (description.startsWith("uri=")) {
-                        return description.substring(4);
-                }
-                return description;
         }
 }
