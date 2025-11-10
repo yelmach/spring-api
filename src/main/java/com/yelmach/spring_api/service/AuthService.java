@@ -1,8 +1,10 @@
 package com.yelmach.spring_api.service;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -10,8 +12,7 @@ import com.yelmach.spring_api.dto.request.LoginRequest;
 import com.yelmach.spring_api.dto.request.RegisterRequest;
 import com.yelmach.spring_api.dto.response.AuthResponse;
 import com.yelmach.spring_api.dto.response.UserResponse;
-import com.yelmach.spring_api.exception.AuthenticationException;
-import com.yelmach.spring_api.exception.DuplicateResourceException;
+import com.yelmach.spring_api.exception.ApiException;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.repository.UserRepository;
 import com.yelmach.spring_api.security.JwtProvider;
@@ -20,58 +21,48 @@ import com.yelmach.spring_api.security.JwtProvider;
 public class AuthService {
 
     @Autowired
-    private UserRepository userRepository;
-
+    AuthenticationManager authenticationManager;
+    
     @Autowired
     private PasswordEncoder passwordEncoder;
-
+    
     @Autowired
     private JwtProvider jwtService;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    public AuthResponse login(LoginRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password()));
 
-    public AuthResponse authenticateUser(LoginRequest loginRequest) {
-        Optional<User> userOptional = userRepository.findByEmail(loginRequest.email());
+            User user = (User) authentication.getPrincipal();
 
-        if (userOptional.isEmpty()) {
-            throw new AuthenticationException("Invalid email or password");
+            String token = jwtService.generateToken(user);
+
+            return new AuthResponse(token, UserResponse.fromUser(user));
+        } catch (BadCredentialsException e) {
+            throw ApiException.unauthorized("Invalid username or password");
+        } catch (Exception e) {
+            throw ApiException.internalError("Authentication failed: " + e.getMessage());
         }
-
-        User user = userOptional.get();
-
-        if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
-            throw new AuthenticationException("Invalid email or password");
-        }
-
-        String token = jwtService.generateToken(user);
-
-        UserResponse userResponse = convertToUserResponse(user);
-
-        return new AuthResponse(token, userResponse);
     }
 
-    public AuthResponse registerUser(RegisterRequest registrationRequest) {
-        if (userRepository.existsByEmail(registrationRequest.email())) {
-            throw new DuplicateResourceException("Email is already registered");
+    public AuthResponse register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw ApiException.badRequest("First name is required");
         }
 
         User user = new User();
-        user.setName(registrationRequest.name());
-        user.setEmail(registrationRequest.email());
-        user.setPassword(passwordEncoder.encode(registrationRequest.password()));
+        user.setName(request.name());
+        user.setEmail(request.email());
+        user.setPassword(passwordEncoder.encode(request.password()));
 
         User savedUser = userRepository.save(user);
 
         String token = jwtService.generateToken(savedUser);
 
-        UserResponse userResponse = convertToUserResponse(savedUser);
-
-        return new AuthResponse(token, userResponse);
-    }
-
-    private UserResponse convertToUserResponse(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getRole());
+        return new AuthResponse(token, UserResponse.fromUser(savedUser));
     }
 }

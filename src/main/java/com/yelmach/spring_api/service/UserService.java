@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,13 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    public UserResponse getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) auth.getPrincipal();
+
+        return UserResponse.fromUser(user);
+    }
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
