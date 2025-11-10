@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
+import com.yelmach.spring_api.exception.ApiException;
 import com.yelmach.spring_api.exception.InvalidRequestException;
 import com.yelmach.spring_api.exception.ResourceNotFoundException;
 import com.yelmach.spring_api.model.Product;
@@ -30,10 +31,8 @@ public class ProductService {
     }
 
     public Product createProduct(ProductCreationRequest request, String userId) {
-        if (userId != null && !userId.isEmpty()) {
-            if (!userRepository.existsById(userId)) {
-                throw new ResourceNotFoundException("User not found with id: " + userId);
-            }
+        if (!userRepository.existsById(userId)) {
+            throw ApiException.notFound("User not found with id: " + userId);
         }
 
         Product product = new Product(request.name(), request.description(), request.price(), userId);
@@ -44,17 +43,12 @@ public class ProductService {
         return productRepository.findById(id);
     }
 
-    public Product updateProductByIdAndUserId(String id, ProductUpdateRequest request, String userId) {
-        Optional<Product> optionalProduct = productRepository.findById(id);
+    public Product updateProduct(String id, ProductUpdateRequest request, String userId) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("producy not found with id: " + userId));
 
-        if (!optionalProduct.isPresent()) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-
-        Product product = optionalProduct.get();
-
-        if (product.getUserId() != null && !product.getUserId().equals(userId)) {
-            throw new ResourceNotFoundException("you don't have permission to update it");
+        if (!product.getUserId().equals(userId)) {
+            throw ApiException.badRequest("you are not the owner of this product");
         }
 
         if (request.name() != null) {
@@ -70,17 +64,12 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public void deleteProductByIdAndUserId(String id, String userId) {
-        Optional<Product> optionalProduct = productRepository.findById(id);
+    public void deleteProduct(String id, String userId) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("producy not found with id: " + userId));
 
-        if (!optionalProduct.isPresent()) {
-            throw new ResourceNotFoundException("Product not found with id: " + id);
-        }
-
-        Product product = optionalProduct.get();
-
-        if (product.getUserId() != null && !product.getUserId().equals(userId)) {
-            throw new ResourceNotFoundException("you don't have permission to delete it");
+        if (!product.getUserId().equals(userId)) {
+            throw ApiException.badRequest("you are not the owner of this product");
         }
 
         productRepository.deleteById(id);
@@ -88,31 +77,10 @@ public class ProductService {
 
     public List<Product> getProductsByUserId(String userId) {
         if (!userRepository.existsById(userId)) {
-            throw new ResourceNotFoundException("User not found with id: " + userId);
+            throw ApiException.notFound("User not found with id: " + userId);
         }
+
         return productRepository.findByUserId(userId);
-    }
-
-    public List<Product> searchProducts(String name) {
-        if (name == null || name.trim().isEmpty()) {
-            throw new InvalidRequestException("Name parameter is required");
-        }
-        return productRepository.findByNameContainingIgnoreCase(name.trim());
-    }
-
-    public List<Product> getProductsByPriceRange(double minPrice, double maxPrice) {
-        if (minPrice < 0 || maxPrice < 0 || minPrice > maxPrice) {
-            throw new InvalidRequestException("Invalid price range. Min price must be >= 0 and <= max price");
-        }
-        return productRepository.findByPriceBetween(minPrice, maxPrice);
-    }
-
-    public List<Product> getHighestPriceProducts() {
-        return productRepository.findTop10ByOrderByPriceDesc();
-    }
-
-    public List<Product> getLowestPriceProducts() {
-        return productRepository.findTop10ByOrderByPriceAsc();
     }
 
     public Map<String, Object> getProductStats() {
@@ -131,9 +99,5 @@ public class ProductService {
 
         stats.put("productsByUser", userProductCounts);
         return stats;
-    }
-
-    public long getProductCount() {
-        return productRepository.count();
     }
 }

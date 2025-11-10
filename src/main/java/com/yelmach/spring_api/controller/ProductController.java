@@ -17,14 +17,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
+import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.model.Product;
 import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.ProductService;
+import com.yelmach.spring_api.service.UserService;
 
 import jakarta.validation.Valid;
 
@@ -34,6 +35,9 @@ public class ProductController {
 
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private UserService userService;
 
     @GetMapping
     public ResponseEntity<List<Product>> getAllProducts() {
@@ -48,28 +52,12 @@ public class ProductController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/price-range")
-    public ResponseEntity<List<Product>> getProductsByPriceRange(@RequestParam double min, @RequestParam double max) {
-        List<Product> products = productService.getProductsByPriceRange(min, max);
-        return ResponseEntity.ok(products);
-    }
+    @PostMapping
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductCreationRequest request) {
+        UserResponse user = userService.getCurrentUser();
 
-    @GetMapping("/highest-price")
-    public ResponseEntity<List<Product>> getHighestPriceProducts() {
-        List<Product> products = productService.getHighestPriceProducts();
-        return ResponseEntity.ok(products);
-    }
-
-    @GetMapping("/lowest-price")
-    public ResponseEntity<List<Product>> getLowestPriceProducts() {
-        List<Product> products = productService.getLowestPriceProducts();
-        return ResponseEntity.ok(products);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<Product>> searchProducts(@RequestParam String name) {
-        List<Product> products = productService.searchProducts(name);
-        return ResponseEntity.ok(products);
+        Product savedProduct = productService.createProduct(request, user.id());
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
     }
 
     @GetMapping("/me")
@@ -78,6 +66,12 @@ public class ProductController {
         User currentUser = (User) authentication.getPrincipal();
         String userId = currentUser.getId();
 
+        List<Product> products = productService.getProductsByUserId(userId);
+        return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Product>> getProductsByUser(@PathVariable String userId) {
         List<Product> products = productService.getProductsByUserId(userId);
         return ResponseEntity.ok(products);
     }
@@ -94,7 +88,7 @@ public class ProductController {
         User currentUser = (User) authentication.getPrincipal();
         String userId = currentUser.getId();
 
-        productService.deleteProductByIdAndUserId(id, userId);
+        productService.deleteProduct(id, userId);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Product with id " + id + " has been deleted");
         return ResponseEntity.ok(response);
@@ -103,21 +97,9 @@ public class ProductController {
     @PatchMapping("/{id}")
     public ResponseEntity<Product> updateProduct(@PathVariable String id,
             @Valid @RequestBody ProductUpdateRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String userId = currentUser.getId();
+        UserResponse user = userService.getCurrentUser();
 
-        Product updatedProduct = productService.updateProductByIdAndUserId(id, request, userId);
+        Product updatedProduct = productService.updateProduct(id, request, user.id());
         return ResponseEntity.ok(updatedProduct);
-    }
-
-    @PostMapping
-    public ResponseEntity<Product> createProduct(@Valid @RequestBody ProductCreationRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String userId = currentUser.getId();
-
-        Product savedProduct = productService.createProduct(request, userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedProduct);
     }
 }
