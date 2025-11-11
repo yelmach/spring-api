@@ -3,10 +3,8 @@ package com.yelmach.spring_api.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,12 +39,14 @@ public class UserService {
                 .toList();
     }
 
-    public Optional<UserResponse> getUserById(@NonNull String id) {
-        return userRepository.findById(id)
-                .map(UserResponse::fromUser);
+    public UserResponse getUserById(String id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("user not found with id: " + id));
+
+        return UserResponse.fromUser(user);
     }
 
-    public UserResponse updateUser(@NonNull String id, UpdateUserRequest request) {
+    public UserResponse updateUser(String id, UpdateUserRequest request) {
         User user = userRepository.findById(id).orElseThrow(
                 () -> ApiException.notFound("User not found with id: " + id));
 

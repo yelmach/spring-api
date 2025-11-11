@@ -3,7 +3,7 @@ package com.yelmach.spring_api.service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,16 +37,17 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public Optional<Product> getProductById(String id) {
-        return productRepository.findById(id);
+    public Product getProductById(String id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> ApiException.notFound("Product not found with id: " + id));
     }
 
     public Product updateProduct(String id, ProductUpdateRequest request, String userId) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("producy not found with id: " + userId));
+                .orElseThrow(() -> ApiException.notFound("product not found with id: " + id));
 
         if (!product.getUserId().equals(userId)) {
-            throw ApiException.badRequest("you are not the owner of this product");
+            throw ApiException.forbidden("you are not the owner of this product");
         }
 
         if (request.name() != null) {
@@ -64,10 +65,10 @@ public class ProductService {
 
     public void deleteProduct(String id, String userId) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("producy not found with id: " + userId));
+                .orElseThrow(() -> ApiException.notFound("product not found with id: " + id));
 
         if (!product.getUserId().equals(userId)) {
-            throw ApiException.badRequest("you are not the owner of this product");
+            throw ApiException.forbidden("you are not the owner of this product");
         }
 
         productRepository.deleteById(id);
@@ -87,13 +88,13 @@ public class ProductService {
 
         List<Object[]> userProductCounts = productRepository.findAll()
                 .stream()
-                .collect(java.util.stream.Collectors.groupingBy(
+                .collect(Collectors.groupingBy(
                         p -> p.getUserId() != null ? p.getUserId() : "No User",
-                        java.util.stream.Collectors.counting()))
+                        Collectors.counting()))
                 .entrySet()
                 .stream()
                 .map(entry -> new Object[] { entry.getKey(), entry.getValue() })
-                .collect(java.util.stream.Collectors.toList());
+                .collect(Collectors.toList());
 
         stats.put("productsByUser", userProductCounts);
         return stats;

@@ -3,13 +3,10 @@ package com.yelmach.spring_api.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,7 +20,6 @@ import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.model.Product;
-import com.yelmach.spring_api.model.User;
 import com.yelmach.spring_api.service.ProductService;
 import com.yelmach.spring_api.service.UserService;
 
@@ -47,9 +43,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable String id) {
-        Optional<Product> product = productService.getProductById(id);
-        return product.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(productService.getProductById(id));
     }
 
     @PostMapping
@@ -62,11 +56,8 @@ public class ProductController {
 
     @GetMapping("/me")
     public ResponseEntity<List<Product>> getMyProducts() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String userId = currentUser.getId();
-
-        List<Product> products = productService.getProductsByUserId(userId);
+        UserResponse user = userService.getCurrentUser();
+        List<Product> products = productService.getProductsByUserId(user.id());
         return ResponseEntity.ok(products);
     }
 
@@ -84,11 +75,10 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String userId = currentUser.getId();
+        UserResponse user = userService.getCurrentUser();
 
-        productService.deleteProduct(id, userId);
+        productService.deleteProduct(id, user.id());
+
         Map<String, String> response = new HashMap<>();
         response.put("message", "Product with id " + id + " has been deleted");
         return ResponseEntity.ok(response);
