@@ -96,23 +96,4 @@ public class JwtProvider {
             return true;
         }
     }
-
-    public boolean isValidToken(String token) {
-        try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
-            return !isTokenExpired(token);
-        } catch (ExpiredJwtException e) {
-            logger.warn("JWT token is expired: {}", e.getMessage());
-            throw new JwtException("JWT token is expired", e);
-        } catch (SignatureException e) {
-            logger.error("JWT signature validation failed: {}", e.getMessage());
-            throw new JwtException("JWT token signature validation failed", e);
-        } catch (Exception e) {
-            logger.error("Unexpected error during JWT validation: {}", e.getMessage());
-            throw new JwtException("JWT token validation failed", e);
-        }
-    }
 }

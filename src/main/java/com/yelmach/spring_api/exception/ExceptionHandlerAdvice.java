@@ -153,11 +153,11 @@ public class ExceptionHandlerAdvice {
         String message = String.format("The requested media type is not supported. use application/json");
 
         ErrorResponse errorResponse = new ErrorResponse(
-                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                HttpStatus.NOT_ACCEPTABLE.value(),
                 "Unsupported Media Type",
                 message);
 
-        return new ResponseEntity<>(errorResponse, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_ACCEPTABLE);
     }
 
     @ExceptionHandler(AuthenticationException.class)
