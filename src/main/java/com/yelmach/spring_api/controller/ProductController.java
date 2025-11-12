@@ -74,22 +74,22 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String id) {
+    public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String productId) {
         UserResponse user = userService.getCurrentUser();
 
-        productService.deleteProduct(id, user.id());
+        productService.deleteProduct(productId, user);
 
         Map<String, String> response = new HashMap<>();
-        response.put("message", "Product with id " + id + " has been deleted");
+        response.put("message", "Product with id " + productId + " has been deleted");
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable String id,
+    public ResponseEntity<Product> updateProduct(@PathVariable String productId,
             @Valid @RequestBody ProductUpdateRequest request) {
         UserResponse user = userService.getCurrentUser();
 
-        Product updatedProduct = productService.updateProduct(id, request, user.id());
+        Product updatedProduct = productService.updateProduct(productId, request, user.id());
         return ResponseEntity.ok(updatedProduct);
     }
 }

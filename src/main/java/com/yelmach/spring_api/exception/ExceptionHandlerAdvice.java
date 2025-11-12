@@ -19,6 +19,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.yelmach.spring_api.dto.response.ErrorResponse;
 
@@ -28,6 +30,7 @@ import jakarta.validation.ConstraintViolationException;
 @RestControllerAdvice
 public class ExceptionHandlerAdvice {
 
+    // custom exception
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
@@ -39,6 +42,7 @@ public class ExceptionHandlerAdvice {
         return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
 
+    // request validation exception
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
 
@@ -105,10 +109,33 @@ public class ExceptionHandlerAdvice {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
+        String message = String.format("%s handler not found", ex.getRequestURL());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                message);
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(NoResourceFoundException ex) {
+        String message = String.format("%s resource not found", ex.getResourcePath());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                "Not Found",
+                message);
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
             MethodArgumentTypeMismatchException ex) {
-
         String message = String.format("Invalid value '%s' for parameter '%s'. Expected type: %s",
                 ex.getValue(), ex.getName(), ex.getRequiredType().getSimpleName());
 
@@ -122,7 +149,6 @@ public class ExceptionHandlerAdvice {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
-
         String message = String.format(
                 "HTTP method '%s' is not supported for this endpoint. Supported methods: %s",
                 ex.getMethod(), String.join(", ", ex.getSupportedMethods()));
@@ -160,6 +186,7 @@ public class ExceptionHandlerAdvice {
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_ACCEPTABLE);
     }
 
+    // security exception
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
@@ -211,6 +238,7 @@ public class ExceptionHandlerAdvice {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    // database exception
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         String message = "Data integrity violation. Please check your input.";
@@ -226,6 +254,7 @@ public class ExceptionHandlerAdvice {
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
+    // fallback exception
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex) {
         ex.printStackTrace();

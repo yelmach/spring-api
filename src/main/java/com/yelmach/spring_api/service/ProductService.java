@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 
 import com.yelmach.spring_api.dto.request.ProductCreationRequest;
 import com.yelmach.spring_api.dto.request.ProductUpdateRequest;
+import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.exception.ApiException;
 import com.yelmach.spring_api.model.Product;
+import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.repository.ProductRepository;
 import com.yelmach.spring_api.repository.UserRepository;
 
@@ -63,15 +65,15 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    public void deleteProduct(String id, String userId) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("product not found with id: " + id));
+    public void deleteProduct(String productId, UserResponse user) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> ApiException.notFound("product not found with id: " + productId));
 
-        if (!product.getUserId().equals(userId)) {
+        if (!product.getUserId().equals(user.id()) && user.role() == Role.USER) {
             throw ApiException.forbidden("you are not the owner of this product");
         }
 
-        productRepository.deleteById(id);
+        productRepository.deleteById(productId);
     }
 
     public List<Product> getProductsByUserId(String userId) {
