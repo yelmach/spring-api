@@ -1,6 +1,5 @@
 package com.yelmach.spring_api.repository;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -22,12 +21,6 @@ public interface UserRepository extends MongoRepository<User, String> {
     boolean existsByEmail(String email);
 
     Optional<User> findByEmail(String email);
-
-    boolean existsByName(String name);
-
-    List<User> findByNameContainingIgnoreCase(String name);
-
-    List<User> findByEmailContainingIgnoreCase(String name);
 
     long countByRole(Role role);
 }
