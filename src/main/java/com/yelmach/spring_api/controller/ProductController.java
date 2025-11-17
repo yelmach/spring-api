@@ -73,7 +73,7 @@ public class ProductController {
         return ResponseEntity.ok(stats);
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{productId}")
     public ResponseEntity<Map<String, String>> deleteProduct(@PathVariable String productId) {
         UserResponse user = userService.getCurrentUser();
 
@@ -84,7 +84,7 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{productId}")
     public ResponseEntity<Product> updateProduct(@PathVariable String productId,
             @Valid @RequestBody ProductUpdateRequest request) {
         UserResponse user = userService.getCurrentUser();

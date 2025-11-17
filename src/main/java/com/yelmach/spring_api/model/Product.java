@@ -25,7 +25,7 @@ public class Product {
 
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
-    @DecimalMax(value = "1000000.00", message = "Price cannot exceed 1_000_000.00")
+    @DecimalMax(value = "10000000.00", message = "Price cannot exceed 10_000_000.00")
     private double price;
 
     @NotBlank(message = "User ID is required")
