@@ -18,4 +18,6 @@ public interface ProductRepository extends MongoRepository<Product, String> {
     // - count() - count all products
 
     List<Product> findByUserId(String userId);
+
+    void deleteByUserId(String userID);
 }

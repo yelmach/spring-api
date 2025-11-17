@@ -9,12 +9,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.yelmach.spring_api.dto.request.UpdateUserRequest;
 import com.yelmach.spring_api.dto.response.UserResponse;
 import com.yelmach.spring_api.exception.ApiException;
 import com.yelmach.spring_api.model.Role;
 import com.yelmach.spring_api.model.User;
+import com.yelmach.spring_api.repository.ProductRepository;
 import com.yelmach.spring_api.repository.UserRepository;
 
 @Service
@@ -22,6 +24,9 @@ public class UserService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -71,11 +76,16 @@ public class UserService {
         return UserResponse.fromUser(updatedUser);
     }
 
+    // 2. Add @Transactional
+    @Transactional
     public UserResponse deleteUser(String id) {
         User user = userRepository.findById(id).orElseThrow(
                 () -> ApiException.notFound("User not found with id: " + id));
 
+        productRepository.deleteByUserId(id);
+
         userRepository.deleteById(id);
+
         return UserResponse.fromUser(user);
     }
 
